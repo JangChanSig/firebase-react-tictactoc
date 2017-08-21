@@ -145,7 +145,7 @@ class Game extends React.Component {
     }
     console.log('insert Value['+i+']['+j+']');
     roomRef.child('row:'+i).set({
-      col+':'+j: X ,
+      col: X ,
     });
     squares[i][j] = this.state.xIsNext ? "X" : "O";
 
