@@ -17,7 +17,7 @@ function calculateWinner(squares) {
   for(let i=0; i<lines.length; i++)
   {
     const [[fx,fy],[sx,sy],[tx,ty]] = lines[i];
-    if (squares[fx][fy] && squares[fx][fy] === squares[sx][sy] && squares[sx][sy] === squares[tx][ty] && squares[fx][fy] !=='N') {
+    if (squares[fx][fy] && squares[fx][fy] == squares[sx][sy] && squares[sx][sy] === squares[tx][ty]) {
       const wincase = [[fx,fy],[sx,sy],[tx,ty]];
       return wincase;
     }
@@ -61,7 +61,7 @@ class Board extends React.Component {
     return(
       <Square
        key={key}
-       value={this.props.squares[i][j] === 'X' || this.props.squares[i][j] === 'O' ? this.props.squares[i][j] : null}
+       value={this.props.squares[i][j]}
        onClick={() => this.props.onClick(i,j)}
        />
    );
@@ -70,7 +70,7 @@ class Board extends React.Component {
     return(
       <HighlightSquare
       key={key}
-      value={this.props.squares[i][j] === 'X' || this.props.squares[i][j] === 'O' ? this.props.squares[i][j] : null}
+      value={this.props.squares[i][j]}
       onClick={() => this.props.onClick(i,j)}
       />
    );
@@ -122,10 +122,13 @@ class Game extends React.Component {
   constructor() {
     super();
     this.state = {
-      squares: [['N','N','N'],['N','N','N'],['N','N','N']],
+      history: [{
+        squares: [[null,null,null],[null,null,null],[null,null,null]]
+      }],
       roomNo:1,
       stepNumber: 0,
       xIsNext: true,
+      IsDesc: true,
       winCaseRows: 3,
       gameOver: false,
       gameOverCase : [[null,null],[null,null],[null,null]]
@@ -151,13 +154,16 @@ class Game extends React.Component {
   }
 
   handleClick(i,j){
-    const squares = this.state.squares.map( function(row){ return row.slice(); });
-    console.log('insert Value['+i+']['+j+'] = '+squares[i][j]);
-    if (squares[i][j] === 'X' || squares[i][j] === 'O' || this.state.gameOver) {
+    const history = this.state.history.slice(0, this.state.stepNumber + 1);
+    const current = history[history.length - 1];
+
+    {/* slice can't make clone of two dimentions. so use map   */}
+    const squares = current.squares.map( function(row){ return row.slice(); });
+    if (squares[i][j] || this.state.gameOver) {
       console.log('end');
       return;
     }
-
+    console.log('insert Value['+i+']['+j+']');
     const element = 'col:'+j;
 
     squares[i][j] = this.state.xIsNext ? "X" : "O";
@@ -176,18 +182,36 @@ class Game extends React.Component {
       });
       for(let _i=0;_i<this.state.winCaseRows;_i++)
       {
-        squares[wincase[_i][0]][wincase[_i][1]] = this.state.xIsNext ? "X" : "O";
+        squares[wincase[_i][0]][wincase[_i][1]] = this.state.xIsNext ? "A" : "B";
       }
     }
 
     {/*rendering start*/}
     this.setState({
-      squares: squares,
+      history: history.concat([
+        {
+          squares: squares
+        }
+      ]),
+      stepNumber: history.length,
       xIsNext: !this.state.xIsNext
     });
   }
-
-  init() {
+  /*
+  handleCheckbox(_IsDesc){
+    console.log('b : '+this.state.IsDesc);
+    console.log('b : '+_IsDesc);
+    this.setState({
+      IsDesc : !_IsDesc,
+    })
+  }
+  */
+  jumpTo(step) {
+    this.setState({
+      gameOver: this.state.stepNumber == step ? true: false,
+      stepNumber: step,
+      xIsNext: (step % 2) === 0,
+    });
     roomRef.update({
       "row:0" : {
         "col:0" : 'N',
@@ -205,42 +229,72 @@ class Game extends React.Component {
         "col:2" : 'N'
       }
     });
-    this.setState({
-      squares: [['N','N','N'],['N','N','N'],['N','N','N']],
-      gameOver : false
+    {/*
+    const current = this.state.history[this.state.stepNumber]
+    roomRef.set({
+      "row:0" : {
+        "col:0" : current.squares[0][0],
+        "col:1" : current.squares[0][1],
+        "col:2" : current.squares[0][2]
+      },
+      "row:1" : {
+        "col:0" : current.squares[1][0],
+        "col:1" : current.squares[1][1],
+        "col:2" : current.squares[1][2]
+      },
+      "row:2" : {
+        "col:0" : current.squares[2][0],
+        "col:1" : current.squares[2][1],
+        "col:2" : current.squares[2][2]
+      }
     });
-  }
-
-  componentDidMount(){
-    roomRef.on('value', snap => {
-      const obj = snap.val();
-      let i =0;
-      var result = Object.keys(obj).map(function(key) {
-        let rows =null;
-        rows = Object.keys(obj['row:'+i]).map(function(key) {
-        return [obj['row:'+i][key]];
-        });
-        i++
-        return rows;
-      });
-      console.log(result);
-      this.setState({
-        squares : result
-      });
-    });
+    */}
   }
 
   render() {
-    const squares = this.state.squares;
-    const wincase = calculateWinner(squares);
+
+    const history = this.state.history;
+    const current = history[this.state.stepNumber];
+    const wincase = calculateWinner(current.squares);
     let winner =null;
     if(wincase)
     {
-      winner = squares[wincase[0][0]][wincase[0][1]];
+      winner = current.squares[wincase[0][0]][wincase[0][1]];
     }
+    {/*
+    for(let i = 0; this.state.stepNumber-i >=0; i++)
+    {
+      console.log(this.state.stepNumber-i +','+ history[this.state.stepNumber-i].squares);
+    }
+
+    alert('length'+history.length+'\nstepNumber'
+    +this.state.stepNumber+ '\nhistory[length]'
+    +history[history.length-1].squares);
+    */}
 
     {/*step is history[move], move is index*/}
 
+    const moves = history.map((step, move) => {
+      let IsBolder = 'notblodline';
+      if(!this.state.IsDesc){
+        move = history.length - move ;
+        if(history.length - move <= 0)
+        {
+           move = 0 ;
+        }
+      }
+      if(move == this.state.stepNumber)
+      {
+        IsBolder = 'boldline';
+      }
+      {/*order must defind after change move*/}
+      const order = move ? 'Move #' + move : 'Game start';
+      return (
+        <li key={move} className={IsBolder}>
+          <a href="#" onClick={() => this.jumpTo(move)}>{order}</a>
+        </li>
+      );
+    });
     let status;
     if (winner) {
       status = 'Winner: ' + winner;
@@ -252,7 +306,7 @@ class Game extends React.Component {
       <div className="game">
         <div className="game-board">
           <Board
-            squares = {this.state.squares}
+            squares = {current.squares}
             gameOver = {this.state.gameOver}
             gameOverCase = {this.state.gameOverCase}
             winCaseRows = {this.state.winCaseRows}
@@ -261,11 +315,30 @@ class Game extends React.Component {
         </div>
         <div className="game-info">
           <div className = "toggle-button">
+
+            <ToggleButton
+            inactiveLabel={'asc'}
+            activeLabel={'desc'}
+              value = { this.state.IsDesc }
+              onToggle = {(value) => {
+                this.setState({
+                  IsDesc: !value,
+                })
+              }}
+            />
+            {/*
+            <input
+              className="check-box"
+              type="checkbox"
+              defaultChecked
+              value = {this.state.IsDesc}
+              onClick = {() => this.handleCheckbox(_IsDesc)}
+            />
+            <label>desc?</label>
+            */}
           </div>
           <div>{status}</div>
-          <ol className="IsBolder">
-            <a href="#" onClick={() => this.init()}> restart</a>
-          </ol>
+          <ol>{moves}</ol>
         </div>
       </div>
     );

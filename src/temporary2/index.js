@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import Game from './Game'; 
+import Game from './Game';
+import DBConnection from './DBConnection.js'
 import * as firebase from 'firebase';
 
 var config = {
@@ -32,6 +33,7 @@ same code with downsirde code
 const element = (
     <div>
       <Game/>
+      <DBConnection/>
     </div>
   );
   ReactDOM.render(
